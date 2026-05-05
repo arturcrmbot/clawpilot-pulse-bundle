@@ -83,7 +83,7 @@
       {
         "id": "step-1",
         "label": "Process collaboration inbox",
-        "prompt": "/pulse-collaboration"
+        "prompt": "Process the Pulse collaboration inbox per /pulse-collaboration. Emit a status report. If nothing new and no outstanding items aged past 24h, emit a single brief line like \"Inbox quiet. <N> teammates reachable.\" — never emit empty output (Clawpilot treats empty as failure)."
       }
     ],
     "schedule": {
