@@ -40,6 +40,11 @@ timeline:                                # max 10 entries
   - {date, event, source}
 related_artifacts:                       # max 6
   - {type, path, description}
+team_context:                            # max 5 entries — what teammates' Pulses know
+  - from: jane                           # teammate handle
+    relevance: high                      # high | low | none | pending
+    summary: "Working on similar architecture with another customer. Has shared assets."
+    last_updated: "2026-05-05"
 watch_queries: ["customer", "person"]    # max 3
 tags: ["industry", "tech"]               # max 4
 notes: |
@@ -58,13 +63,56 @@ Passive mentions and CC'd emails do NOT meet the threshold.
 
 Before creating, search existing slugs. If a file already exists, **update it**. Default `involvement: observer` unless the user clearly owns it.
 
+## Team context broadcast — automatic on key events
+
+Teammates running their own Pulse may have relevant context on the same customer. On qualifying events, fan out a query to every reachable teammate and let their Pulses respond asynchronously. Their answers populate `team_context` on this project YAML — `/pulse-collaboration` ingests responses (which can arrive minutes or hours later).
+
+**When to broadcast:**
+- **Always on new project creation** (discovery threshold met for a customer not yet tracked)
+- On **major updates**: status escalation to `blocked`, `risk_level` raised to `high`/`critical`, project moves from `on-hold` back to `active`
+- **7-day cooldown** per project — don't re-broadcast on minor changes (timeline entries, refresh, stakeholder pruning)
+
+**How:**
+
+1. Run discovery via the `/pulse-collaboration` skill's discovery step → get `[{handle, inbox_path}]`.
+2. For each reachable teammate, write an `agent_request` YAML to their `inbox_path`:
+
+   ```yaml
+   type: agent_request
+   request_id: "<fresh uuid>"
+   project_id: "<this project's slug>"
+   from_handle: "<your handle>"
+   task: |
+     New engagement: <Customer> / <Initiative>.
+     Have you had activity on this in the LAST 30 DAYS? Looking for: ongoing meetings,
+     commitments, key contacts, anything pertinent right now.
+     Context (1 line): <summary>
+   created_at: "<ISO>"
+   ```
+
+   Filename: `YYYY-MM-DD-request-<your-handle>-<first8charsOfUUID>.yaml`.
+
+3. Seed a `team_context` entry per teammate in the project YAML:
+
+   ```yaml
+   team_context:
+     - from: <handle>
+       relevance: pending
+       summary: "Asked <today>, no response yet."
+       last_updated: "<today>"
+   ```
+
+4. Continue creating/updating the project. **Don't block** waiting for replies.
+
+If no teammates are reachable (no shared folders), skip silently — leave `team_context` empty.
+
 ## Read-before-write
 
 Always: list directory → read existing file → merge new info → apply curation limits → set `updated_at` → write the full file. Never overwrite blindly.
 
 ## Curation limits (HARD)
 
-Stakeholders ≤6 · Timeline ≤10 · Tags ≤4 · Watch queries ≤3 · Artifacts ≤6 · Summary ≤2 sentences. When exceeded, **prune oldest low-value entries first** (digest mentions, repeated flags) — never the newest.
+Stakeholders ≤6 · Timeline ≤10 · Tags ≤4 · Watch queries ≤3 · Artifacts ≤6 · `team_context` ≤5 · Summary ≤2 sentences. When exceeded, **prune oldest low-value entries first** — never the newest.
 
 ## Commitment lifecycle
 
@@ -81,3 +129,4 @@ Stakeholders ≤6 · Timeline ≤10 · Tags ≤4 · Watch queries ≤3 · Artifa
 - Mark `lead` from a single email or meeting attendance
 - Treat `inferred` due dates as overdue
 - Delete history when uncertain — add a `[STALE]` or `[INFO]` timeline entry instead
+- Broadcast on minor updates — that spams teammates
