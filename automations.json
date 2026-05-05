@@ -32,7 +32,7 @@
       {
         "id": "step-1",
         "label": "Triage unread inbox",
-        "prompt": "Triage unread email and chats. Use /pulse-projects for project context.\n\n1. Resolve <PULSE_HOME>.\n2. Pull m365_list_emails (unread, last 24h, top 50) and m365_list_chats (top 10 with unread, expand via m365_list_chat_messages).\n3. Classify each item: reply_needed | escalation | commitment_update | meeting_prep | info | fyi. Default to info when uncertain. Don't over-classify as reply_needed — false positives waste user attention.\n4. Cross-reference with project YAMLs at <PULSE_HOME>\\projects\\ — surface project slug for matched items. When evidence shows a commitment was completed/delivered, update the project per /pulse-projects.\n5. For each reply_needed, draft a response using m365_create_draft (saves to Drafts; user edits and sends). Match the user's tone — concise, direct. Reference details from project memory by name where available.\n6. NEVER auto-send. Always show drafts and let the user confirm.\n\nOutput: scannable summary in chat. Sections: 🚨 escalations → ✉️ replies needed (with drafts) → 📅 next 24h meetings → 📋 commitments updated → 📥 sweep candidates. End with one-liner: 'Reply to draft 1?' or similar.\n\nWhen running on automation, stay completely silent if no escalations and no reply_needed items."
+        "prompt": "Triage unread email and chats. Use /pulse-projects for project context.\n\n1. Resolve <PULSE_HOME>.\n2. Pull m365_list_emails (unread, last 24h, top 50) and m365_list_chats (top 10 with unread, expand via m365_list_chat_messages).\n3. Classify each item: reply_needed | escalation | commitment_update | meeting_prep | info | fyi. Default to info when uncertain. Don't over-classify as reply_needed — false positives waste user attention.\n4. Cross-reference with project YAMLs at <PULSE_HOME>\\projects\\ — surface project slug for matched items. When evidence shows a commitment was completed/delivered, update the project per /pulse-projects.\n5. For each reply_needed, draft a response using m365_create_draft (saves to Drafts; user edits and sends). Match the user's tone — concise, direct. Reference details from project memory by name where available.\n6. NEVER auto-send. Always show drafts and let the user confirm.\n\nOutput: scannable summary in chat. Sections: 🚨 escalations → ✉️ replies needed (with drafts) → 📅 next 24h meetings → 📋 commitments updated → 📥 sweep candidates. End with one-liner: 'Reply to draft 1?' or similar.\n\nALWAYS emit at least one line. If there's nothing actionable, emit a brief one-liner like '(no new escalations or replies needed)' — Clawpilot's automation runner treats empty output as failure."
       }
     ],
     "schedule": {
@@ -83,7 +83,7 @@
       {
         "id": "step-1",
         "label": "Process collaboration inbox",
-        "prompt": "/pulse-collaboration\n\nProcess the inbox. Resolve <PULSE_HOME>. List <PULSE_HOME>\\jobs\\pending\\*.yaml and dispatch each:\n- agent_request → find context, pick a status (answered | no_context | declined), write the response YAML to the resolved reply destination at <OneDriveRoot>\\Documents\\Pulse-Team\\<from_handle>\\jobs\\pending\\, archive the request to completed/.\n- agent_response → append a [TEAM] timeline entry to the matching project YAML (or .broadcast-orphans/ if missing), archive to completed/.\n- anything else → skip.\n\nWhen running on automation, stay completely silent if no requests or responses are in the inbox."
+        "prompt": "/pulse-collaboration"
       }
     ],
     "schedule": {
