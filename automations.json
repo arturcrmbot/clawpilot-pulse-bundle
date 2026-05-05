@@ -1,0 +1,104 @@
+[
+  {
+    "id": "pulse-morning-digest",
+    "name": "Pulse — Morning digest",
+    "description": "Daily 07:00. Overdue commitments, today's meetings, Horizon, updated projects, candidate new projects, team inbox.",
+    "steps": [
+      {
+        "id": "step-1",
+        "label": "Generate morning digest",
+        "prompt": "Generate today's morning digest. Use /pulse-projects for project memory context.\n\n1. Resolve <PULSE_HOME> via $env:OneDriveCommercial\\Documents\\Pulse, falling back to $env:OneDrive\\Documents\\Pulse, then $env:USERPROFILE\\Documents\\Pulse.\n2. Find overdue commitments across all <PULSE_HOME>\\projects\\*.yaml — only those with status: open AND due before today AND due_confidence: explicit. Sort by days overdue. Inferred due dates never count as overdue.\n3. List today's meetings via m365_list_events. Match each to a project by attendee company / subject keywords / stakeholder name and note prep status. Flag any meeting with no project link as [NO PREP].\n4. Call m_get_horizon_actions. If it errors with LokiGraphQLError or any error, omit the Horizon section silently — don't fail.\n5. List projects whose updated_at is within the last 24h, with a one-line 'what changed' from the latest timeline entry.\n6. Detect candidate NEW projects per the /pulse-projects discovery rule (3+ mentions, 2+ source types, 1+ actionable) from recent emails/chats — list as candidates, do NOT auto-create.\n7. Count pending agent_requests in <PULSE_HOME>\\jobs\\pending\\.\n8. If <PULSE_HOME>\\intel\\<today>.md exists, link to it.\n\nWrite a ≤50-line digest to <PULSE_HOME>\\digests\\<today>.md AND surface in chat. Order: overdue → today's meetings → Horizon → updated projects → candidate new projects → team inbox → intel pointer. Drop empty sections entirely. Specifics over summaries — names, exact day counts, amounts. Don't inflate."
+      }
+    ],
+    "schedule": {
+      "kind": "single",
+      "naturalLanguage": "Daily at 07:00",
+      "days": [0, 1, 2, 3, 4, 5, 6],
+      "time": { "hour": 7, "minute": 0 },
+      "hour": 7,
+      "minute": 0
+    },
+    "enabled": false,
+    "createdAt": "2026-05-05T12:00:00.000Z",
+    "updatedAt": "2026-05-05T12:00:00.000Z",
+    "triggerType": "schedule",
+    "skillNames": ["pulse-projects"]
+  },
+  {
+    "id": "pulse-workday-triage",
+    "name": "Pulse — Workday triage",
+    "description": "Every 30 min on weekdays from 09:00. Classify unread email/chats; draft replies (never auto-sends); update commitments where evidence shows progress.",
+    "steps": [
+      {
+        "id": "step-1",
+        "label": "Triage unread inbox",
+        "prompt": "Triage unread email and chats. Use /pulse-projects for project context.\n\n1. Resolve <PULSE_HOME>.\n2. Pull m365_list_emails (unread, last 24h, top 50) and m365_list_chats (top 10 with unread, expand via m365_list_chat_messages).\n3. Classify each item: reply_needed | escalation | commitment_update | meeting_prep | info | fyi. Default to info when uncertain. Don't over-classify as reply_needed — false positives waste user attention.\n4. Cross-reference with project YAMLs at <PULSE_HOME>\\projects\\ — surface project slug for matched items. When evidence shows a commitment was completed/delivered, update the project per /pulse-projects.\n5. For each reply_needed, draft a response using m365_create_draft (saves to Drafts; user edits and sends). Match the user's tone — concise, direct. Reference details from project memory by name where available.\n6. NEVER auto-send. Always show drafts and let the user confirm.\n\nOutput: scannable summary in chat. Sections: 🚨 escalations → ✉️ replies needed (with drafts) → 📅 next 24h meetings → 📋 commitments updated → 📥 sweep candidates. End with one-liner: 'Reply to draft 1?' or similar.\n\nWhen running on automation, stay completely silent if no escalations and no reply_needed items."
+      }
+    ],
+    "schedule": {
+      "kind": "interval",
+      "naturalLanguage": "Every 30 minutes on weekdays from 09:00",
+      "days": [1, 2, 3, 4, 5],
+      "intervalMinutes": 30,
+      "anchor": { "hour": 9, "minute": 0 },
+      "hour": 9,
+      "minute": 0
+    },
+    "enabled": false,
+    "createdAt": "2026-05-05T12:00:00.000Z",
+    "updatedAt": "2026-05-05T12:00:00.000Z",
+    "triggerType": "schedule",
+    "skillNames": ["pulse-projects"]
+  },
+  {
+    "id": "pulse-daily-intel",
+    "name": "Pulse — Daily intel brief",
+    "description": "Daily 09:00. RSS digest filtered for relevance to your work. Edit the prompt to point at your own feeds and competitors.",
+    "steps": [
+      {
+        "id": "step-1",
+        "label": "Generate intel brief",
+        "prompt": "Run today's RSS intelligence brief using Playwright MCP browser tools. Resolve <PULSE_HOME>.\n\nFeeds (edit to your own):\n- https://news.google.com/rss/search?q=AI+agents+LLM&when:2d&hl=en-US\n- https://techcrunch.com/category/artificial-intelligence/feed/\n- https://arstechnica.com/ai/feed/\n- https://openai.com/blog/rss.xml\n\nCompetitors / topics to watch (edit to your own):\n- Google Gemini — pricing, enterprise wins, new services\n- OpenAI — model releases, pricing, enterprise wins\n- Anthropic — model releases, enterprise wins\n- AI Agents, LLM, foundation models\n\n1. Read <PULSE_HOME>\\.intel-state.json if present — skip URLs already surfaced in prior runs.\n2. For each feed, browser_navigate and parse <item> (RSS) or <entry> (Atom). On feed failure, log and continue.\n3. Drop articles older than 48h.\n4. Score relevance: HIGH = competitor + watch term, OR matches a project memory customer + meaningful event. MEDIUM = topic keyword in title. LOW = topic keyword in body only. DROP = generic AI hype, listicles, opinion pieces.\n5. Cap at 15 articles. Group by Competitor moves → Topic → Industry/customer (link to project slug if matched). Per article: 1–3 lines — source, what happened, why it matters in this user's role.\n\nWrite ≤40 lines to <PULSE_HOME>\\intel\\<today>.md AND surface in chat. Update <PULSE_HOME>\\.intel-state.json with run timestamp and the URLs included.\n\nNever fabricate articles. Don't editorialize — report what happened, not what to think. Specifics: names, products, pricing, dates."
+      }
+    ],
+    "schedule": {
+      "kind": "single",
+      "naturalLanguage": "Daily at 09:00",
+      "days": [0, 1, 2, 3, 4, 5, 6],
+      "time": { "hour": 9, "minute": 0 },
+      "hour": 9,
+      "minute": 0
+    },
+    "enabled": false,
+    "createdAt": "2026-05-05T12:00:00.000Z",
+    "updatedAt": "2026-05-05T12:00:00.000Z",
+    "triggerType": "schedule",
+    "skillNames": []
+  },
+  {
+    "id": "pulse-collaboration-poll",
+    "name": "Pulse — Team collaboration poll",
+    "description": "Every 5 min. Process incoming agent_request and agent_response YAMLs in jobs/pending. Silent when inbox is empty. Enable after sharing your OneDrive folder with at least one teammate.",
+    "steps": [
+      {
+        "id": "step-1",
+        "label": "Process collaboration inbox",
+        "prompt": "/pulse-collaboration\n\nProcess the inbox. Resolve <PULSE_HOME>. List <PULSE_HOME>\\jobs\\pending\\*.yaml and dispatch each:\n- agent_request → find context, pick a status (answered | no_context | declined), write the response YAML to the resolved reply destination at <OneDriveRoot>\\Documents\\Pulse-Team\\<from_handle>\\jobs\\pending\\, archive the request to completed/.\n- agent_response → append a [TEAM] timeline entry to the matching project YAML (or .broadcast-orphans/ if missing), archive to completed/.\n- anything else → skip.\n\nWhen running on automation, stay completely silent if no requests or responses are in the inbox."
+      }
+    ],
+    "schedule": {
+      "kind": "interval",
+      "naturalLanguage": "Every 5 minutes",
+      "days": [0, 1, 2, 3, 4, 5, 6],
+      "intervalMinutes": 5,
+      "anchor": { "hour": 0, "minute": 0 },
+      "hour": 0,
+      "minute": 0
+    },
+    "enabled": false,
+    "createdAt": "2026-05-05T12:00:00.000Z",
+    "updatedAt": "2026-05-05T12:00:00.000Z",
+    "triggerType": "schedule",
+    "skillNames": ["pulse-collaboration"]
+  }
+]
