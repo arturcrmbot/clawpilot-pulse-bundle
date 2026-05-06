@@ -32,10 +32,54 @@ All four start `enabled: false`. Enable each in Clawpilot's Automations panel af
    ```
    https://github.com/arturcrmbot/clawpilot-pulse-bundle
    ```
-   Both skills + all four automations install in one click.
-3. New chat → `/pulse-projects` and describe a customer engagement. The skill creates the YAML in your OneDrive.
+   All three skills + four automations install in one click.
 
-That's the entire setup. No config files. No onboarding walkthrough.
+Then run the setup walkthrough below.
+
+## Setup walkthrough
+
+A few one-time steps. Most are clicks; Clawpilot handles the rest.
+
+### 1. Settings → Permissions → enable
+
+Open Clawpilot's **Settings → Permissions** and enable everything you're comfortable with. Saves a lot of click-through prompts later when skills call tools.
+
+### 2. Set up your Pulse folders (one chat command)
+
+In a fresh chat, say:
+
+> *"Set up my Pulse folders, including team collaboration."*
+
+Clawpilot creates everything you need under your OneDrive: project memory, jobs inbox, digest/intel/signal archives. It saves your handle to its memory so it doesn't have to ask again. It opens File Explorer at the folder you'll need to share next.
+
+### 3. Share your `jobs/pending/` folder with teammates
+
+For each teammate you want to collaborate with:
+
+1. Right-click the folder Clawpilot opened (or navigate to it in OneDrive web).
+2. Share → grant **Can edit** access.
+3. Send.
+
+**Important:** share only the `pending/` folder, **never its parent `jobs/`**. Sharing the parent exposes your `completed/` archive — every past inter-agent message you've sent or received.
+
+### 4. Accept teammates' shares — and click "Add shortcut to my files"
+
+When a teammate shares their pending folder back:
+
+1. Open the share notification (or go to OneDrive web → Shared with me).
+2. Click **Add shortcut to my files**.
+
+**This is the critical step.** Without "Add shortcut", the share is read-only-cloud and your replies can't route. If you only "open" the share, your Pulse will never find their inbox.
+
+### 5. Wait ~5 minutes for OneDrive to sync
+
+OneDrive needs a few minutes to surface the new shared folders to your local view. After that:
+
+- The **Team collaboration poll** automation (every 5 min) starts auto-processing inbound requests
+- To send a question, just chat: *"Ask Jane about the Acme engagement."*
+- Replies arrive in your inbox over the next minutes/hours; the poll picks them up and updates project memory
+
+Day-to-day use after this is just chat. No config files, no path-typing, no folder admin.
 
 ## Where data lives
 

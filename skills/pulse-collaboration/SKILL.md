@@ -1,38 +1,67 @@
 ---
 name: pulse-collaboration
-description: Use when the user wants to message a teammate's Pulse, see who they can reach, check incoming questions, or ingest a teammate's reply. Also handles the every-5-min poll automation.
+description: Use when the user wants to set up Pulse for the first time, message a teammate's Pulse, see who they can reach, check incoming questions, or ingest a teammate's reply. Also handles the every-5-min poll automation.
 ---
 
 # Pulse Collaboration
 
-Inter-agent messaging via OneDrive shared folders. Process inboxes, surface what was found, enrich project memory with what other agents know.
+Inter-agent messaging via OneDrive shared folders. One-time setup, then process inboxes, surface what was found, enrich project memory with what other agents know.
 
 ## Critical: never produce empty output
 
 Clawpilot's automation runner treats empty agent output as a failure. **Always emit at least one line of output**, even on a routine no-op poll. Use the minimal one-liner format described in "Output" below.
 
-## Setup — share only `pending/`
+## Setup — first-time install
 
-Teammates write `agent_request` YAMLs into your inbox. They never need to read your responses or history.
+When the user says **"set up Pulse"** / **"install Pulse"** / **"set my Pulse up including collaboration"** or similar, run this once-per-machine routine.
 
-**Share only `<PULSE_HOME>\jobs\pending\` with teammates** — never its parent. Sharing `jobs\` or any wrapping `<handle>\` folder exposes your `completed\` archive, which contains historical messages with PII and confidential business context. That's a leak.
+1. **Resolve handle.** `m_recall` for `pulse_handle`. If unset, derive lowercased first-name from `m_get_my_profile`'s email local-part. Persist via `m_recall set pulse_handle <value>`.
 
-In OneDrive web:
-1. Navigate to `<PULSE_HOME>\jobs\pending\`.
-2. Right-click → Share → grant **Can edit** to each teammate by name (they need to write).
-3. Accept their shares the same way — they should be sharing only their `pending\` folder.
+2. **Create folder structure** under `<PULSE_HOME>` (silent if any already exist):
+   - `projects\` — project YAMLs (per `/pulse-projects`)
+   - `jobs\pending\` — your inbox (this is what you share with teammates)
+   - `jobs\completed\` — your archive (private — never share)
+   - `digests\` — daily digest archive
+   - `intel\` — RSS brief archive
+   - `pulse-signals\` — drafted field signals (per `/pulse-signal`)
 
-If a teammate has over-shared (you see their `completed\` folder when you accept their share), tell them — they should re-share only `pending\`.
+3. **Migrate legacy data.** If `<OneDriveRoot>\Documents\Pulse-Team\<your-handle>\jobs\` exists with files in `pending/` or `completed/`, move them into the corresponding subfolder under `<PULSE_HOME>\jobs\`. Ask the user before deleting the now-empty legacy folder.
 
-## Behavior — on every invocation
+4. **Open the share target** in File Explorer so the user can right-click → Share immediately:
+   ```powershell
+   Start-Process explorer "<PULSE_HOME>\jobs\pending\"
+   ```
+
+5. **Walk the user through the share/accept dance** in chat output:
+
+   ```
+   ✅ Pulse folders ready. Your handle: <handle>.
+
+   📤 Share your pending folder with teammates (one-time, in OneDrive web or right-click in File Explorer):
+      <PULSE_HOME>\jobs\pending\
+      → grant "Can edit". Share ONLY this folder — never the parent.
+
+   📥 When a teammate shares their pending folder back:
+      → Open the OneDrive notification or "Shared with me"
+      → Click "Add shortcut to my files"  ← without this, replies can't route!
+
+   ⏱  Wait ~5 min for OneDrive to sync. Then:
+      → /pulse-collaboration polls every 5 min and processes anything new automatically
+      → To send a question, just ask: "Ask Jane about Acme."
+
+   💡 Tip: Settings → Permissions → enable broadly to skip click-through prompts on tool use.
+   ```
+
+6. **Don't re-run** if folders already exist and the handle is set. Just confirm: `"✓ Pulse already set up. Handle: <handle>."`
+
+## Behavior — on every invocation (after setup)
 
 Do these in order. Each step is fault-tolerant: a missing folder, a tool error, or 0 results is handled silently and the next step proceeds.
 
-1. **Resolve your handle.** `m_recall` for `pulse_handle`. If unset, derive from `m_get_my_profile` (lowercase first-name from email local-part), persist via `m_recall set pulse_handle <value>`. Never block waiting for user input.
+1. **Resolve your handle** (as in Setup step 1).
 
-2. **Process both inboxes.** Each independent; missing or empty is fine:
-   - `<PULSE_HOME>\jobs\pending\` — your local inbox
-   - `<OneDriveRoot>\Documents\Pulse-Team\<your-handle>\jobs\pending\` — your team-shared inbox (legacy Pulse Agent convention)
+2. **Process inbox.** Missing or empty is fine:
+   - `<PULSE_HOME>\jobs\pending\` — your inbox
 
    For each `*.yaml`:
    - `type: agent_request` → answer (see Answering), move to sibling `completed/`
@@ -44,15 +73,14 @@ Do these in order. Each step is fault-tolerant: a missing folder, a tool error, 
    | Pattern | Path shape | Handle source | Notes |
    |---|---|---|---|
    | **A — recommended (pending-only share)** | `<OneDriveRoot>\<DisplayName>'s files - pending\` | lowercased first-word of `<DisplayName>` | Privacy-clean. Only `pending/` is shared. |
-   | B | `<OneDriveRoot>\<DisplayName>'s files - <suffix>\jobs\pending\` | `<suffix>` (the handle) | Sender exposed `completed/`. Mark `over_shared: true`. |
-   | C | `<OneDriveRoot>\<DisplayName>'s files - jobs\pending\` | lowercased first-word of `<DisplayName>` | Sender exposed `completed/`. Mark `over_shared: true`. |
-   | D | `<OneDriveRoot>\Documents\Pulse-Team\<handle>\jobs\pending\` | `<handle>` | Manual placement. May or may not expose `completed/` depending on what they shared. Mark `over_shared: true` if a sibling `completed\` is visible. |
+   | B (legacy) | `<OneDriveRoot>\<DisplayName>'s files - <suffix>\jobs\pending\` | `<suffix>` (the handle) | Sender exposed `completed/`. Mark `over_shared: true`. |
+   | C (legacy) | `<OneDriveRoot>\<DisplayName>'s files - jobs\pending\` | lowercased first-word of `<DisplayName>` | Sender exposed `completed/`. Mark `over_shared: true`. |
 
    `inbox_path` is the resolved `pending/` directory. The skill writes to that path regardless of pattern.
 
    Exclude `alpha`, `beta`, `agent-alpha`, `agent-beta` (demo personas) and your own self-mirror.
 
-   When emitting the routine status output (see Output), if any teammate has `over_shared: true`, append a one-line note: `⚠ <handle> has over-shared (their completed/ is visible) — ask them to re-share only pending/.`
+   When emitting the routine status output (see Output), if any teammate has `over_shared: true`, append: `⚠ <handle> has over-shared (their completed/ is visible) — ask them to re-share only pending/.`
 
 4. **Emit output** per the format below.
 
@@ -87,7 +115,7 @@ No `reply_to` field — sender knows where you'll write back (their discovered `
 2. **Pick status:** `answered` (direct evidence), `no_context` (no relevant data — DO NOT fabricate), `declined` (explicit reason; rare).
 3. **Compose** the response YAML.
 4. **Write to recipient.** Find teammate from discovery where `handle == from_handle`. Write to their `inbox_path` with filename `YYYY-MM-DD-response-<your-handle>-<first8charsOfRequestId>.yaml`. UTF-8, block YAML.
-5. **If no discovery match,** flag in output: `⚠ Cannot reply to <from_handle> — accept their OneDrive share.` Do NOT mkdir.
+5. **If no discovery match,** flag in output: `⚠ Cannot reply to <from_handle> — accept their OneDrive share and click "Add shortcut to my files".` Do NOT mkdir.
 6. **Move** the original request to sibling `completed/`.
 
 ## Ingesting
@@ -120,7 +148,7 @@ User: *"Ask Jane about the X engagement."* (Or auto-triggered by `/pulse-project
 1. Discovery — match by handle exact, or fuzzy substring on `display_name` (lowercased).
 2. Compose `agent_request` with your handle, fresh UUID, the question.
 3. Write to teammate's `inbox_path`. Filename: `YYYY-MM-DD-request-<your-handle>-<first8charsOfUUID>.yaml`.
-4. If no match, emit: `<name> hasn't shared a Pulse folder yet.` Skip the write.
+4. If no match, emit: `<name> hasn't shared a Pulse folder yet (or you haven't accepted + added the shortcut).` Skip the write.
 
 ## Output
 
@@ -156,10 +184,9 @@ This is non-empty → automation marks success → no notification spam.
 
 - Fabricate answers — `no_context` is legitimate.
 - Delete jobs — always move to sibling `completed/`.
-- Cross-move files between the two inbox paths.
-- mkdir into a folder that doesn't exist — that's a sync problem.
+- mkdir into a folder that doesn't exist — that's a sync problem (teammate hasn't shared back, or user hasn't clicked "Add shortcut").
 - Block waiting for user input during automation runs.
 - **Produce empty output.** Clawpilot's automation runner treats empty as failure.
 - List demo personas (`alpha`, `beta`, `agent-alpha`, `agent-beta`) or your own self-mirror as reachable.
-- Track outbound request_ids or pending-inquiry metadata in user-visible output. The project YAML's `team_context` is the source of truth for team enrichment; the messaging plumbing is invisible.
-- **Tell users to share `jobs\` or any wrapping `<handle>\` folder.** Only `pending\` should be shared; the rest is private.
+- Track outbound request_ids or pending-inquiry metadata in user-visible output. The project YAML's `team_context` is the source of truth for team enrichment.
+- **Tell users to share `jobs\` or any wrapping folder.** Only `pending\` should be shared; the rest is private.
