@@ -27,10 +27,10 @@ When the user says **"set up Pulse"** / **"install Pulse"** / **"set my Pulse up
 
 3. **Migrate legacy data.** If `<OneDriveRoot>\Documents\Pulse-Team\<your-handle>\jobs\` exists with files in `pending/` or `completed/`, move them into the corresponding subfolder under `<PULSE_HOME>\jobs\`. Ask the user before deleting the now-empty legacy folder.
 
-4. **Open the share target** in File Explorer so the user can right-click → Share immediately:
-   ```powershell
-   Start-Process explorer "<PULSE_HOME>\jobs\pending\"
-   ```
+4. **Open the share target** in the user's file manager so they can right-click → Share immediately:
+   - Windows (PowerShell): `Start-Process explorer "<PULSE_HOME>\jobs\pending\"`
+   - macOS: `open "<PULSE_HOME>/jobs/pending"`
+   - Linux: `xdg-open "<PULSE_HOME>/jobs/pending"`
 
 5. **Walk the user through the share/accept dance** in chat output:
 

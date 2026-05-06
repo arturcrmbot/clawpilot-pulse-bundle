@@ -9,11 +9,29 @@ Persistent project memory: one YAML file per customer engagement, stored in OneD
 
 ## Path
 
-Resolve `<PULSE_HOME>` once via shell:
+`<PULSE_HOME>` is the Pulse folder under the user's OneDrive `Documents/`. Resolve once at start, picking the first existing path for the user's OS:
 
+**Windows (PowerShell):**
 ```powershell
 if ($env:OneDriveCommercial) { "$env:OneDriveCommercial\Documents\Pulse" } elseif ($env:OneDrive) { "$env:OneDrive\Documents\Pulse" } else { "$env:USERPROFILE\Documents\Pulse" }
 ```
+
+**macOS (zsh/bash):**
+```bash
+# Modern (macOS 12.3+): OneDrive for Business under Library/CloudStorage
+ls -d "$HOME/Library/CloudStorage/OneDrive-"*/Documents 2>/dev/null | head -1
+# Older convention
+ls -d "$HOME/OneDrive - "*/Documents 2>/dev/null | head -1
+# Personal OneDrive
+[ -d "$HOME/OneDrive/Documents" ] && echo "$HOME/OneDrive/Documents"
+# Last resort
+echo "$HOME/Documents"
+```
+Take the first non-empty result, append `/Pulse`.
+
+**Linux:** `$HOME/OneDrive/Documents/Pulse` if it exists, else `$HOME/Documents/Pulse`.
+
+If none exists, create under the last-resort path. Path examples in this skill use Windows-style `\` — on macOS/Linux, use `/` instead.
 
 Files live at `<PULSE_HOME>\projects\<slug>.yaml`. Slug is lowercase-hyphenated. **One file per customer** — workshops, reviews, sub-meetings are timeline entries, never separate files.
 
