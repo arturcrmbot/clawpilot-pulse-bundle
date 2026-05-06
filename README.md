@@ -1,8 +1,8 @@
 # Pulse for Clawpilot
 
-Persistent project memory + lightweight inter-agent collaboration over OneDrive. Two skills, four automations, zero config.
+Persistent project memory + lightweight inter-agent collaboration over OneDrive + structured field-signal drafting. Three skills, four automations, zero config.
 
-The bundle leans on Clawpilot's built-in M365 tools, Playwright MCP, filesystem MCP, Horizon, and automation scheduler. It adds two things Clawpilot doesn't ship: a curated project-memory schema, and a folder-convention protocol for teammate-to-teammate questions.
+The bundle leans on Clawpilot's built-in M365 tools, Playwright MCP, filesystem MCP, Horizon, and automation scheduler. It adds three things Clawpilot doesn't ship: a curated project-memory schema, a folder-convention protocol for teammate-to-teammate questions, and a signal-drafter for capturing field intel in standard templates.
 
 ## What's in here
 
@@ -12,6 +12,7 @@ The bundle leans on Clawpilot's built-in M365 tools, Playwright MCP, filesystem 
 |---|---|
 | **`/pulse-projects`** | User mentions a customer, deal, stakeholder, commitment, or named engagement |
 | **`/pulse-collaboration`** | Polling the local job inbox, sending a teammate's agent a question, or ingesting a reply |
+| **`/pulse-signal`** | User wants to draft a field signal — customer win, loss, escalation, compete intel, product feedback, or reusable IP |
 
 ### Automations (start disabled — enable each in the Automations panel)
 
