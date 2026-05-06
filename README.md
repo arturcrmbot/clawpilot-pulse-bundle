@@ -56,19 +56,30 @@ The first `/pulse-projects` write creates `<PULSE_HOME>\projects\` if missing. O
 Convention-only — no config files.
 
 ```
-<OneDriveRoot>\Documents\
-├── Pulse\                            ← YOUR projects, jobs, etc.
-└── Pulse-Team\
-    ├── <your-handle>\jobs\pending\   ← what teammates write to ask YOU
-    ├── jane\jobs\pending\            ← what you write to ask Jane
-    └── bob\jobs\pending\             ← what you write to ask Bob
+<OneDriveRoot>\Documents\Pulse\
+├── projects\                              ← YOUR project YAMLs
+└── jobs\
+    ├── pending\                           ← YOUR INBOX — teammates write here
+    └── completed\                         ← YOUR ARCHIVE — never share this
 ```
 
-**Setup (one-time, in OneDrive web):** share your `Pulse\jobs\pending\` folder with teammates as `Pulse-Team\<your-handle>\jobs\pending\`. Accept their shares. The folder name IS the handle.
+After teammates accept your share and you accept theirs, your local OneDrive surfaces their inboxes:
+```
+<OneDriveRoot>\
+├── <Their Display Name>'s files - pending\   ← write here to message them
+└── ...
+```
+
+### Setup — share only `pending/` (one-time, in OneDrive web)
+
+1. Navigate to `<PULSE_HOME>\jobs\pending\` in OneDrive web.
+2. Right-click → Share → grant **Can edit** to each teammate by name.
+3. **Share only the `pending/` folder, not its parent.** Sharing `jobs/` exposes your `completed/` archive (historical messages, PII).
+4. Accept teammates' shares the same way. If you see a `completed/` folder inside their share, tell them — they should re-share only `pending/`.
 
 `/pulse-collaboration` does the rest: poll your inbox, route requests/responses by folder name, archive processed jobs. No team list to maintain — folders appear/disappear as people share/unshare.
 
-Enable the **Team collaboration poll** automation only after you've shared your folder with at least one teammate. Until then it'll just no-op every 5 minutes (silent).
+Enable the **Team collaboration poll** automation only after you've accepted at least one teammate's share. Until then it'll just no-op every 5 minutes (silent).
 
 ## MSX MCP (optional, Microsoft-internal)
 

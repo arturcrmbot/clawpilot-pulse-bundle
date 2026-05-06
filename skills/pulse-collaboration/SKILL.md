@@ -11,6 +11,19 @@ Inter-agent messaging via OneDrive shared folders. Process inboxes, surface what
 
 Clawpilot's automation runner treats empty agent output as a failure. **Always emit at least one line of output**, even on a routine no-op poll. Use the minimal one-liner format described in "Output" below.
 
+## Setup — share only `pending/`
+
+Teammates write `agent_request` YAMLs into your inbox. They never need to read your responses or history.
+
+**Share only `<PULSE_HOME>\jobs\pending\` with teammates** — never its parent. Sharing `jobs\` or any wrapping `<handle>\` folder exposes your `completed\` archive, which contains historical messages with PII and confidential business context. That's a leak.
+
+In OneDrive web:
+1. Navigate to `<PULSE_HOME>\jobs\pending\`.
+2. Right-click → Share → grant **Can edit** to each teammate by name (they need to write).
+3. Accept their shares the same way — they should be sharing only their `pending\` folder.
+
+If a teammate has over-shared (you see their `completed\` folder when you accept their share), tell them — they should re-share only `pending\`.
+
 ## Behavior — on every invocation
 
 Do these in order. Each step is fault-tolerant: a missing folder, a tool error, or 0 results is handled silently and the next step proceeds.
@@ -26,12 +39,20 @@ Do these in order. Each step is fault-tolerant: a missing folder, a tool error, 
    - `type: agent_response` → ingest (see Ingesting), move to sibling `completed/`
    - anything else → skip
 
-3. **Discover teammates.** Scan OneDrive for folders containing `jobs\pending\`. Build `[{handle, display_name?, inbox_path}]`:
-   - `<OneDriveRoot>\<DisplayName>'s files - <suffix>\jobs\pending\` → handle = `<suffix>`, display = `<DisplayName>`
-   - `<OneDriveRoot>\<DisplayName>'s files - jobs\pending\` → handle = lowercased first-word of display
-   - `<OneDriveRoot>\Documents\Pulse-Team\<handle>\jobs\pending\` → handle = `<handle>`
+3. **Discover teammates.** Scan OneDrive for shared folders that contain inbound message YAMLs. Build `[{handle, display_name?, inbox_path, over_shared?}]` from these shapes:
+
+   | Pattern | Path shape | Handle source | Notes |
+   |---|---|---|---|
+   | **A — recommended (pending-only share)** | `<OneDriveRoot>\<DisplayName>'s files - pending\` | lowercased first-word of `<DisplayName>` | Privacy-clean. Only `pending/` is shared. |
+   | B | `<OneDriveRoot>\<DisplayName>'s files - <suffix>\jobs\pending\` | `<suffix>` (the handle) | Sender exposed `completed/`. Mark `over_shared: true`. |
+   | C | `<OneDriveRoot>\<DisplayName>'s files - jobs\pending\` | lowercased first-word of `<DisplayName>` | Sender exposed `completed/`. Mark `over_shared: true`. |
+   | D | `<OneDriveRoot>\Documents\Pulse-Team\<handle>\jobs\pending\` | `<handle>` | Manual placement. May or may not expose `completed/` depending on what they shared. Mark `over_shared: true` if a sibling `completed\` is visible. |
+
+   `inbox_path` is the resolved `pending/` directory. The skill writes to that path regardless of pattern.
 
    Exclude `alpha`, `beta`, `agent-alpha`, `agent-beta` (demo personas) and your own self-mirror.
+
+   When emitting the routine status output (see Output), if any teammate has `over_shared: true`, append a one-line note: `⚠ <handle> has over-shared (their completed/ is visible) — ask them to re-share only pending/.`
 
 4. **Emit output** per the format below.
 
@@ -113,6 +134,7 @@ User: *"Ask Jane about the X engagement."* (Or auto-triggered by `/pulse-project
   ✓ Enriched team_context on contoso-migration (from Bob: high — has shared assets)
 
 [If any agent_response had empty project_id, dump its result here under a "From <handle>:" header]
+[If any teammate is over_shared, note: ⚠ <handle> has over-shared their jobs/ folder — ask them to re-share only pending/.]
 ```
 
 ### No activity (routine 5-min poll, nothing new)
@@ -140,3 +162,4 @@ This is non-empty → automation marks success → no notification spam.
 - **Produce empty output.** Clawpilot's automation runner treats empty as failure.
 - List demo personas (`alpha`, `beta`, `agent-alpha`, `agent-beta`) or your own self-mirror as reachable.
 - Track outbound request_ids or pending-inquiry metadata in user-visible output. The project YAML's `team_context` is the source of truth for team enrichment; the messaging plumbing is invisible.
+- **Tell users to share `jobs\` or any wrapping `<handle>\` folder.** Only `pending\` should be shared; the rest is private.
